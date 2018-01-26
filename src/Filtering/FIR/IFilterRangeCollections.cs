@@ -41,14 +41,12 @@ namespace MathNet.Filtering.FIR
 
         public void CheckRange(PrimitiveFilterRange range)
         {
-            if (range.IsPassType ^ IsPassType)
+            if (!(range.IsPassType ^ IsPassType)) return;
+            if (this is PassRangeBase thizpass)
+                thizpass.CheckRange(range);
+            if (range is PassRangeBase pass)
             {
-                if (this is PassRangeBase thizpass)
-                    thizpass.CheckRange(range);
-                if (range is PassRangeBase pass)
-                {
-                    pass.CheckRange(this);
-                }
+                pass.CheckRange(this);
             }
         }
 
@@ -68,8 +66,11 @@ namespace MathNet.Filtering.FIR
          if (range is BandStopRange stop)
              CheckRange(stop);
         }
-        public abstract void CheckRange(BandStopRange range);
         public override bool IsPassType => true;
+
+        public abstract double Max { get; }
+        public abstract double Min { get; }
+        public abstract void CheckRange(BandStopRange range);
     }
 
     /// range:[0,lowPassRate], half->normalize(lowPassRate)
@@ -99,8 +100,8 @@ namespace MathNet.Filtering.FIR
 
         protected override IFirFilterRangeCollections Add(BandWithRange range)
         {
-            if (_lowPassRate < range.LowCutoffRate) new FilterPassRange(this, range);
-            if (_lowPassRate < range.HighCutoffRate) new LowPassRange(range.HighCutoffRate);
+            if (_lowPassRate < range.LowCutoffRate) return new FilterPassRange(this, range);
+            if (_lowPassRate < range.HighCutoffRate) return new LowPassRange(range.HighCutoffRate);
             return this;
         }
 
@@ -108,6 +109,10 @@ namespace MathNet.Filtering.FIR
         {
             return new CombinedRange(this,range);
         }
+
+        public override double Max => _lowPassRate;
+
+        public override double Min => 0;
 
         public override void CheckRange(BandStopRange range)
         {
@@ -141,8 +146,8 @@ namespace MathNet.Filtering.FIR
 
         protected override IFirFilterRangeCollections Add(BandWithRange range)
         {
-            if (_highPassRate > range.HighCutoffRate) new FilterPassRange(range,this);
-            if (_highPassRate > range.LowCutoffRate) new HighPassRange(range.LowCutoffRate);
+            if (_highPassRate > range.HighCutoffRate) return new FilterPassRange(range,this);
+            if (_highPassRate > range.LowCutoffRate) return new HighPassRange(range.LowCutoffRate);
             return this;
         }
 
@@ -150,6 +155,10 @@ namespace MathNet.Filtering.FIR
         {
             return new CombinedRange(this,range);
         }
+
+        public override double Max => double.PositiveInfinity;
+
+        public override double Min => _highPassRate;
 
         public override void CheckRange(BandStopRange range)
         {
@@ -163,8 +172,8 @@ namespace MathNet.Filtering.FIR
     /// range:[lowCutoffRate,highCutoffRate], half-> normalize(highCutoffRate)-normalize(lowCutoffRate)
     public class BandWithRange:PassRangeBase
     {
-        private int _lowCutoffRate;
-        private int _highCutoffRate;
+        private readonly int _lowCutoffRate;
+        private readonly int _highCutoffRate;
         public int LowCutoffRate => _lowCutoffRate;
         public int HighCutoffRate => _highCutoffRate;
 
@@ -202,6 +211,10 @@ namespace MathNet.Filtering.FIR
             return new CombinedRange(this,range);
         }
 
+        public override double Max => _highCutoffRate;
+
+        public override double Min => _lowCutoffRate;
+
         public override void CheckRange(BandStopRange range)
         {
             if (_lowCutoffRate<=range.LowPassRate&& range.HighPassRate <=_highCutoffRate)
@@ -233,20 +246,11 @@ namespace MathNet.Filtering.FIR
         public override double[] FirCoefficients { get; }
         public override bool IsPassType => false;
 
-        protected override IFirFilterRangeCollections Add(LowPassRange range)
-        {
-            return new CombinedRange(range,this);
-        }
+        protected override IFirFilterRangeCollections Add(LowPassRange range) => new CombinedRange(range,this);
 
-        protected override IFirFilterRangeCollections Add(HighPassRange range)
-        {
-            return new CombinedRange(range,this);
-        }
+        protected override IFirFilterRangeCollections Add(HighPassRange range) => new CombinedRange(range,this);
 
-        protected override IFirFilterRangeCollections Add(BandWithRange range)
-        {
-            return new CombinedRange(range,this);
-        }
+        protected override IFirFilterRangeCollections Add(BandWithRange range) => new CombinedRange(range,this);
 
         protected override IFirFilterRangeCollections Add(BandStopRange range)
         {
@@ -258,53 +262,86 @@ namespace MathNet.Filtering.FIR
 
     public class FilterPassRange : IFirFilterRangeCollections
     {
-        public FilterPassRange(LowPassRange lowPassRange, HighPassRange range)
+        private readonly List<PassRangeBase> _passRangeList;
+        public FilterPassRange(PassRangeBase lowPassRange, PassRangeBase range)
         {
-            throw new NotImplementedException();
+            _passRangeList = new List<PassRangeBase> {lowPassRange, range};
+            _passRangeList.Sort(PassRangeComparator);
         }
 
-        public FilterPassRange(LowPassRange lowPassRange, BandWithRange range)
+        //     比较两个对象并返回指示一个是否小于、 等于还是大于另一个值。
+        //   x:
+        //     要比较的第一个对象。
+        //   y:
+        //     要比较的第二个对象。
+        // 返回结果:
+        //     一个有符号整数，指示 x 和 y 的相对值，如下表所示。 值 含义 小于零 x 小于 y。 零 x 等于 y。 大于零 x 大于 y。
+        private int PassRangeComparator(PassRangeBase x, PassRangeBase y)
         {
-            throw new NotImplementedException();
+            if (x.Max < y.Min) return -1;
+            if (x.Min > y.Max) return 1;
+            return 0;//overlap
         }
 
-        public FilterPassRange(BandWithRange lowPassRange, HighPassRange range)
-        {
-            throw new NotImplementedException();
-        }
-
-        public FilterPassRange(BandWithRange lowPassRange, BandWithRange range)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IEnumerable<PrimitiveFilterRange> PrimitiveRanges { get; }
+        public IEnumerable<PrimitiveFilterRange> PrimitiveRanges => _passRangeList;
         public double[] FirCoefficients { get; }
         public IFirFilterRangeCollections Add(PrimitiveFilterRange range)
         {
-            throw new NotImplementedException();
+            switch (range)
+            {
+                case BandStopRange stop:
+                    return new CombinedRange(this,stop);
+                case PassRangeBase pass:
+                    throw new NotImplementedException();
+                    _passRangeList.Add(pass);
+                    _passRangeList.Sort(PassRangeComparator);
+                    break;
+            }
+            throw new ArgumentOutOfRangeException($"{range.GetType()} is not supported");
+        }
+
+        public void CheckRange(BandStopRange range)
+        {
+            foreach (var pass in _passRangeList)
+            {
+                pass.CheckRange(range);
+            }
         }
     }
 
     public class FilterStopRange : IFirFilterRangeCollections
     {
+        private readonly List<BandStopRange> _stopRangeList;
         public FilterStopRange(BandStopRange bandStopRange, BandStopRange range)
+        {
+            _stopRangeList=new List<BandStopRange>{bandStopRange,range};
+            _stopRangeList.Sort(StopRangeComparator);
+        }
+
+        private int StopRangeComparator(BandStopRange x, BandStopRange y)
         {
             throw new NotImplementedException();
         }
 
-        public IEnumerable<PrimitiveFilterRange> PrimitiveRanges { get; }
+        public IEnumerable<PrimitiveFilterRange> PrimitiveRanges => _stopRangeList;
         public double[] FirCoefficients { get; }
         public IFirFilterRangeCollections Add(PrimitiveFilterRange range)
         {
-            throw new NotImplementedException();
+            switch (range)
+            {
+                case BandStopRange stop:
+                case PassRangeBase pass:
+                    throw new NotImplementedException();
+                    break;
+            }
+            throw new ArgumentOutOfRangeException($"{range.GetType()} is not supported");
         }
     }
 
     public class CombinedRange:IFirFilterRangeCollections
     {
-        private readonly IFirFilterRangeCollections _passRanges;
-        private readonly IFirFilterRangeCollections _stopRanges;
+        private IFirFilterRangeCollections _passRanges;
+        private IFirFilterRangeCollections _stopRanges;
         public CombinedRange(PassRangeBase passRange, BandStopRange range)
         {
             passRange.CheckRange(range);
@@ -312,8 +349,9 @@ namespace MathNet.Filtering.FIR
             _stopRanges = range;
         }
 
-        private CombinedRange(IFirFilterRangeCollections passRange, IFirFilterRangeCollections range)
+        public CombinedRange(FilterPassRange passRange, BandStopRange range)
         {
+            passRange.CheckRange(range);
             _passRanges = passRange;
             _stopRanges = range;
         }
@@ -330,9 +368,7 @@ namespace MathNet.Filtering.FIR
                 {
                     pRange.CheckRange(range);
                 }
-
-                var pass = _passRanges.Add(range);
-                return new CombinedRange(pass,_stopRanges);
+                _passRanges = _passRanges.Add(range);
             }
             else
             {
@@ -340,10 +376,9 @@ namespace MathNet.Filtering.FIR
                 {
                     pRange.CheckRange(range);
                 }
-
-                var stop = _stopRanges.Add(range);
-                return new CombinedRange(_passRanges, stop);
+                _stopRanges = _stopRanges.Add(range);
             }
+            return this;
         }
     }
 
