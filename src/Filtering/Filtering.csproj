@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>MathNet.Filtering</RootNamespace>
     <AssemblyName>MathNet.Filtering</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SignAssembly>false</SignAssembly>
     <TargetFrameworkProfile />
@@ -38,6 +38,9 @@
     <CodeAnalysisIgnoreGeneratedCode>true</CodeAnalysisIgnoreGeneratedCode>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="MathNet.Numerics">
+      <HintPath>..\..\packages\MathNet.Numerics\lib\net40\MathNet.Numerics.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Numerics" />
@@ -54,6 +57,7 @@
     <Compile Include="DataSources\SinusoidalSource.cs" />
     <Compile Include="FilterType.cs" />
     <Compile Include="FIR\FirCoefficients.cs" />
+    <Compile Include="FIR\IFilterRangeCollections.cs" />
     <Compile Include="FIR\OnlineFirFilter.cs" />
     <Compile Include="IOnlineFilter.cs" />
     <Compile Include="IIR\IirCoefficients.cs" />
