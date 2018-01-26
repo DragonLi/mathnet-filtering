@@ -65,6 +65,8 @@ namespace MathNet.Filtering.FIR
                 halforder = (int)Math.Ceiling(3.3 / (df / samplingRate) / 2);
             }
 
+            if (halforder < 0) halforder = 0;
+
             int order = 2*halforder + 1;
             var c = new double[order];
             c[halforder] = nu;
@@ -99,6 +101,7 @@ namespace MathNet.Filtering.FIR
                 df = (df < maxDf) ? df : maxDf;
                 halforder = (int)Math.Ceiling(3.3 / (df / samplingRate) / 2);
             }
+            if (halforder < 0) halforder = 0;
 
             int order = 2*halforder + 1;
             var c = new double[order];
@@ -136,6 +139,7 @@ namespace MathNet.Filtering.FIR
                 df = (df < maxDf) ? df : maxDf;
                 halforder = (int)Math.Ceiling(3.3 / (df / samplingRate) / 2);
             }
+            if (halforder < 0) halforder = 0;
 
             int order = 2*halforder + 1;
             var c = new double[order];
@@ -173,6 +177,7 @@ namespace MathNet.Filtering.FIR
                 df = (df < maxDf) ? df : maxDf;
                 halforder = (int)Math.Ceiling(3.3 / (df / samplingRate) / 2);
             }
+            if (halforder < 0) halforder = 0;
 
             int order = 2*halforder + 1;
             var c = new double[order];
