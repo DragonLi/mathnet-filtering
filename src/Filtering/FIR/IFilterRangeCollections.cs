@@ -39,7 +39,7 @@ namespace MathNet.Filtering.FIR
             throw new NotImplementedException($"can not add this range type:{range.GetType()}");
         }
 
-        public void CheckRange(PrimitiveFilterRange range)
+        public virtual void CheckRange(PrimitiveFilterRange range)
         {
             if (!(range.IsPassType ^ IsPassType)) return;
             if (this is PassRangeBase thizpass)
@@ -61,12 +61,31 @@ namespace MathNet.Filtering.FIR
 
     public abstract class PassRangeBase : PrimitiveFilterRange
     {
-        public new void CheckRange(PrimitiveFilterRange range)
+        public override void CheckRange(PrimitiveFilterRange range)
         {
          if (range is BandStopRange stop)
              CheckRange(stop);
         }
         public override bool IsPassType => true;
+
+        //     比较两个对象并返回指示一个是否小于、 等于还是大于另一个值。
+        //   x:
+        //     要比较的第一个对象。
+        //   y:
+        //     要比较的第二个对象。
+        // 返回结果:
+        //     一个有符号整数，指示 x 和 y 的相对值，如下表所示。 值 含义 小于零 x 小于 y。 零 x 等于 y。 大于零 x 大于 y。
+        public static int PassRangeComparator(PassRangeBase x, PassRangeBase y)
+        {
+            if (x.Max < y.Min) return -1;
+            if (x.Min > y.Max) return 1;
+            return 0;//overlap
+        }
+
+        public int Compare(PassRangeBase y)
+        {
+            return PassRangeComparator(this, y);
+        }
 
         public abstract double Max { get; }
         public abstract double Min { get; }
@@ -266,21 +285,7 @@ namespace MathNet.Filtering.FIR
         public FilterPassRange(PassRangeBase lowPassRange, PassRangeBase range)
         {
             _passRangeList = new List<PassRangeBase> {lowPassRange, range};
-            _passRangeList.Sort(PassRangeComparator);
-        }
-
-        //     比较两个对象并返回指示一个是否小于、 等于还是大于另一个值。
-        //   x:
-        //     要比较的第一个对象。
-        //   y:
-        //     要比较的第二个对象。
-        // 返回结果:
-        //     一个有符号整数，指示 x 和 y 的相对值，如下表所示。 值 含义 小于零 x 小于 y。 零 x 等于 y。 大于零 x 大于 y。
-        private int PassRangeComparator(PassRangeBase x, PassRangeBase y)
-        {
-            if (x.Max < y.Min) return -1;
-            if (x.Min > y.Max) return 1;
-            return 0;//overlap
+            _passRangeList.Sort(PassRangeBase.PassRangeComparator);
         }
 
         public IEnumerable<PrimitiveFilterRange> PrimitiveRanges => _passRangeList;
@@ -292,12 +297,61 @@ namespace MathNet.Filtering.FIR
                 case BandStopRange stop:
                     return new CombinedRange(this,stop);
                 case PassRangeBase pass:
-                    throw new NotImplementedException();
-                    _passRangeList.Add(pass);
-                    _passRangeList.Sort(PassRangeComparator);
+                    Merge(pass);
                     break;
             }
             throw new ArgumentOutOfRangeException($"{range.GetType()} is not supported");
+        }
+
+        private void Merge(PassRangeBase pass)
+        {
+            PassRangeBase start=null;
+            var startInd = -1;
+            var insertInd = -1;
+            for (var i = 0; i < _passRangeList.Count; i++)
+            {
+                var range = _passRangeList[i];
+                var compare = range.Compare(pass);
+                if (compare < 0)
+                    continue;
+                if (compare > 0)
+                {
+                    insertInd = i;
+                    break;
+                }
+                if (compare == 0)
+                {
+                    start = range;
+                    startInd = i;
+                    break;
+                }
+            }
+
+            if (start == null)
+            {
+                if (insertInd < 0)
+                    _passRangeList.Add(pass);
+                else
+                    _passRangeList.Insert(insertInd, pass);
+
+                return;
+            }
+
+            PassRangeBase end = null;
+            var endIndx = -1;
+            for (var i = startInd; i < _passRangeList.Count; i++)
+            {
+                var range = _passRangeList[i];
+                var compare = range.Compare(pass);
+                if (compare == 0)
+                    continue;
+
+                if (compare > 0)
+                {
+                    endIndx = i;
+                    end = _passRangeList[i - 1];
+                }
+            }
         }
 
         public void CheckRange(BandStopRange range)
