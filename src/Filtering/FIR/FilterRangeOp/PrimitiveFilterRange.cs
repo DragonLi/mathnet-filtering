@@ -7,8 +7,7 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
     {
         public IEnumerable<PrimitiveFilterRange> PrimitiveRanges => null;
         public double[] FirCoefficients => null;
-        private static readonly AllRange _instance = new AllRange();
-        public static IFirFilterRangeCollections Instance => _instance;
+        public static readonly IFirFilterRangeCollections Instance = new AllRange();
         private AllRange(){}
 
         public IFirFilterRangeCollections Add(PrimitiveFilterRange range)
@@ -217,7 +216,7 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
         public override void CheckRange(BandStopRange range)
         {
             if (range.HighPassRate >= _highPassRate)
-                throw new ArgumentException($"Pass/Stop range overlap: {_highPassRate}~{range.HighPassRate}");
+                throw new ArgumentException($"Pass/Stop range overlap: {Math.Max(_highPassRate,range.LowPassRate)}~{range.HighPassRate}");
         }
 
         public int HighPassRate => _highPassRate;
