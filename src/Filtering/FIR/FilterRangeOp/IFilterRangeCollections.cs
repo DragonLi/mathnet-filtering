@@ -16,10 +16,7 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
         {
             var builder = new StringBuilder();
             foreach (var range in col.PrimitiveRanges)
-            {
-                builder.Append(range.Show());
-                builder.Append(" ");
-            }
+                builder.Append(range.Show()).Append(" ");
 
             return builder.ToString();
         }
@@ -29,9 +26,7 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
             if (acc == null) return null;
             if (other == null) return null;
             for (var i = 0; i < acc.Length; i++)
-            {
                 acc[i] += other[i];
-            }
             return acc;
         }
 
@@ -39,10 +34,8 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
         {
             if (coeff==null) return "full range";
             var builder = new StringBuilder();
-            for (var i = 0; i < coeff.Length; i++)
-            {
-                builder.Append(coeff[i]).Append(" ");
-            }
+            foreach (var t in coeff)
+                builder.Append(t).Append(" ");
 
             return builder.ToString();
         }

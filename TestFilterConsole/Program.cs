@@ -48,9 +48,13 @@ namespace TestFilterConsole
             mix = mix.Add(PrimitiveFilterRange.CreateBandWithRange(30,10000));
             PrintRange(mix);
 
+            mix = mix.Add(PrimitiveFilterRange.CreateBandWithRange(30,10000));
+            PrintRange(mix);
+
             try
             {
                 mix = mix.Add(PrimitiveFilterRange.CreatBandStopRange(60, 80));
+                PrintRange(mix);
             }
             catch (Exception e)
             {

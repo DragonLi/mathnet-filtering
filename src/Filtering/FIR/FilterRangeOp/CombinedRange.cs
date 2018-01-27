@@ -44,17 +44,13 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
             if (range.IsPassType)
             {
                 foreach (var pRange in _stopRanges.PrimitiveRanges)
-                {
                     pRange.CheckRange(range);
-                }
                 _passRanges = _passRanges.Add(range);
             }
             else
             {
                 foreach (var pRange in _passRanges.PrimitiveRanges)
-                {
                     pRange.CheckRange(range);
-                }
                 _stopRanges = _stopRanges.Add(range);
             }
             return this;
@@ -76,9 +72,9 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
         public double[] GetFirCoefficients(double sampleRate, int halfOrder)
         {
             var acc = new double[2*halfOrder+1];
-            for (var i = 0; i < _passRangeList.Count; i++)
+            foreach (var t in _passRangeList)
             {
-                var coeff=_passRangeList[i].GetFirCoefficients(sampleRate, halfOrder);
+                var coeff=t.GetFirCoefficients(sampleRate, halfOrder);
                 if (coeff == null) return null;
                 acc.Acc(coeff);
             }
@@ -88,18 +84,10 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
 
         public IFirFilterRangeCollections Add(PrimitiveFilterRange range)
         {
-            switch (range)
-            {
-                case BandStopRange stop:
-                    return new CombinedRange(this,stop);
-                case PassRangeBase pass:
-                    Merge(pass);
-                    return this;
-            }
-            throw new ArgumentOutOfRangeException($"{range.GetType()} is not supported");
+            return range.Add(this);
         }
 
-        private void Merge(PassRangeBase other)
+        public IFirFilterRangeCollections Merge(PassRangeBase other)
         {
             var tmpPassRangeList = new List<PassRangeBase>();
             var lastInd = _passRangeList.Count;
@@ -110,7 +98,11 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
                 if (compare < 0)
                     tmpPassRangeList.Add(range);
                 if (compare == 0)
+                {
                     other = MergeOverlap(range,other);
+                    if (other == AllRange.Instance)
+                        return other;
+                }
 
                 if (compare > 0)
                 {
@@ -120,39 +112,32 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
             }
             tmpPassRangeList.Add(other);
             for (var j = lastInd; j < _passRangeList.Count; j++)
-            {
                 tmpPassRangeList.Add(_passRangeList[j]);
-            }
             _passRangeList.Clear();
             _passRangeList.AddRange(tmpPassRangeList);
+            return this;
         }
 
         private static PassRangeBase MergeOverlap(PassRangeBase range, PassRangeBase other)
         {
             var min = (int)Math.Min(range.Min, other.Min);
             var max = Math.Max(range.Max, other.Max);
-            if (max == Double.PositiveInfinity)
+            if (max < double.PositiveInfinity)
             {
-                if (min == 0)
-                    return AllRange.Instance;
-                return new HighPassRange(min);
+                var intmax = (int)max;
+                if (min > 0)
+                    return new BandWithRange(min,intmax);
+                return new LowPassRange(intmax);
             }
-
-            var intmax = (int)max;
-            if (0 < min)
-            {
-                return new BandWithRange(min,intmax);
-            }
-
-            return new LowPassRange(intmax);
+            if (min == 0)
+                return AllRange.Instance;
+            return new HighPassRange(min);
         }
 
         public void CheckRange(BandStopRange range)
         {
             foreach (var pass in _passRangeList)
-            {
                 pass.CheckRange(range);
-            }
         }
     }
 
@@ -171,9 +156,9 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
         public double[] GetFirCoefficients(double sampleRate, int halfOrder)
         {
             var acc = new double[2*halfOrder+1];
-            for (var i = 0; i < _stopRangeList.Count; i++)
+            foreach (var t in _stopRangeList)
             {
-                var coeff=_stopRangeList[i].GetFirCoefficients(sampleRate, halfOrder);
+                var coeff=t.GetFirCoefficients(sampleRate, halfOrder);
                 if (coeff == null) return null;
                 acc.Acc(coeff);
             }
@@ -183,18 +168,10 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
 
         public IFirFilterRangeCollections Add(PrimitiveFilterRange range)
         {
-            switch (range)
-            {
-                case BandStopRange stop:
-                    Merge(stop);
-                    return this;
-                case PassRangeBase pass:
-                    return new CombinedRange(pass,this);
-            }
-            throw new ArgumentOutOfRangeException($"{range.GetType()} is not supported");
+            return range.Add(this);
         }
 
-        private void Merge(BandStopRange other)
+        public void Merge(BandStopRange other)
         {
             var tmpStopList=new List<BandStopRange>();
             var lastInd = _stopRangeList.Count;
@@ -215,9 +192,7 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
             }
             tmpStopList.Add(other);
             for (var j = lastInd; j < _stopRangeList.Count; j++)
-            {
                 tmpStopList.Add(_stopRangeList[j]);
-            }
             _stopRangeList.Clear();
             _stopRangeList.AddRange(tmpStopList);
         }
@@ -231,11 +206,8 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
 
         public void CheckRange(PassRangeBase passRange)
         {
-            for (var i = 0; i < _stopRangeList.Count; i++)
-            {
-                var stop = _stopRangeList[i];
-                passRange.CheckRange(stop);
-            }
+            foreach (var t in _stopRangeList)
+                passRange.CheckRange(t);
         }
     }
 }
