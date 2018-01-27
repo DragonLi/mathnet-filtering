@@ -68,13 +68,11 @@ namespace MathNet.Filtering.FIR
         }
         public override bool IsPassType => true;
 
-        //     比较两个对象并返回指示一个是否小于、 等于还是大于另一个值。
-        //   x:
-        //     要比较的第一个对象。
-        //   y:
-        //     要比较的第二个对象。
-        // 返回结果:
-        //     一个有符号整数，指示 x 和 y 的相对值，如下表所示。 值 含义 小于零 x 小于 y。 零 x 等于 y。 大于零 x 大于 y。
+        // 比较两个对象并返回指示一个是否小于、 等于还是大于另一个值。
+        // x:要比较的第一个对象。
+        // y:要比较的第二个对象。
+        // 返回结果:一个有符号整数，指示 x 和 y 的相对值，如下表所示。 值 含义 小于零 x 小于 y。 零 x 等于 y。 大于零 x 大于 y。
+        // return 0 when x y overlap, ie. x.Max >= y.Min and x.Min <= y.Max,
         public static int PassRangeComparator(PassRangeBase x, PassRangeBase y)
         {
             if (x.Max < y.Min) return -1;
@@ -250,8 +248,8 @@ namespace MathNet.Filtering.FIR
     /// range:[0,lowPassRate]+[highPassRate,infinity), half->1-(normalize(highPassRate)-normalize(lowPassRate))
     public class BandStopRange:PrimitiveFilterRange
     {
-        private int _lowPassRate;
-        private int _highPassRate;
+        private readonly int _lowPassRate;
+        private readonly int _highPassRate;
         public int HighPassRate => _highPassRate;
         public int LowPassRate => _lowPassRate;
 
@@ -277,6 +275,18 @@ namespace MathNet.Filtering.FIR
             if (range._lowPassRate <= _lowPassRate && _highPassRate <= range._highPassRate) return range;
             return new FilterStopRange(this,range);
         }
+
+        public int Compare(BandStopRange other)
+        {
+            return Compare(this, other);
+        }
+
+        public static int Compare(BandStopRange x, BandStopRange y)
+        {
+            if (x.HighPassRate < y.LowPassRate) return -1;
+            if (y.HighPassRate < x.LowPassRate) return 1;
+            return 0;//overlap
+        }
     }
 
     public class FilterPassRange : IFirFilterRangeCollections
@@ -298,60 +308,56 @@ namespace MathNet.Filtering.FIR
                     return new CombinedRange(this,stop);
                 case PassRangeBase pass:
                     Merge(pass);
-                    break;
+                    return this;
             }
             throw new ArgumentOutOfRangeException($"{range.GetType()} is not supported");
         }
 
-        private void Merge(PassRangeBase pass)
+        private void Merge(PassRangeBase other)
         {
-            PassRangeBase start=null;
-            var startInd = -1;
-            var insertInd = -1;
+            var tmpPassRangeList = new List<PassRangeBase>();
             for (var i = 0; i < _passRangeList.Count; i++)
             {
                 var range = _passRangeList[i];
-                var compare = range.Compare(pass);
+                var compare = range.Compare(other);
                 if (compare < 0)
-                    continue;
-                if (compare > 0)
                 {
-                    insertInd = i;
-                    break;
+                    tmpPassRangeList.Add(range);
                 }
                 if (compare == 0)
                 {
-                    start = range;
-                    startInd = i;
-                    break;
+                    other = MergeOverlap(range,other);
                 }
-            }
 
-            if (start == null)
-            {
-                if (insertInd < 0)
-                    _passRangeList.Add(pass);
-                else
-                    _passRangeList.Insert(insertInd, pass);
-
-                return;
-            }
-
-            PassRangeBase end = null;
-            var endIndx = -1;
-            for (var i = startInd; i < _passRangeList.Count; i++)
-            {
-                var range = _passRangeList[i];
-                var compare = range.Compare(pass);
-                if (compare == 0)
-                    continue;
-
-                if (compare > 0)
+                if (compare <= 0) continue;
+                tmpPassRangeList.Add(other);
+                other = null;
+                for (var j = i; j < _passRangeList.Count; j++)
                 {
-                    endIndx = i;
-                    end = _passRangeList[i - 1];
+                    tmpPassRangeList.Add(_passRangeList[j]);
                 }
+                _passRangeList.Clear();
+                _passRangeList.AddRange(tmpPassRangeList);
+                break;
             }
+            if (other != null)
+                _passRangeList.Add(other);
+        }
+
+        private static PassRangeBase MergeOverlap(PassRangeBase range, PassRangeBase other)
+        {
+            var min = Math.Min(range.Min, other.Min);
+            var max = Math.Max(range.Max, other.Max);
+            if (0 < min && max != Double.PositiveInfinity)
+            {
+                return new BandWithRange((int)min,(int)max);
+            }
+
+            if (max == Double.PositiveInfinity)
+            {
+                return new HighPassRange((int)min);
+            }
+            return new LowPassRange((int)max);
         }
 
         public void CheckRange(BandStopRange range)
@@ -369,12 +375,7 @@ namespace MathNet.Filtering.FIR
         public FilterStopRange(BandStopRange bandStopRange, BandStopRange range)
         {
             _stopRangeList=new List<BandStopRange>{bandStopRange,range};
-            _stopRangeList.Sort(StopRangeComparator);
-        }
-
-        private int StopRangeComparator(BandStopRange x, BandStopRange y)
-        {
-            throw new NotImplementedException();
+            _stopRangeList.Sort(BandStopRange.Compare);
         }
 
         public IEnumerable<PrimitiveFilterRange> PrimitiveRanges => _stopRangeList;
@@ -384,11 +385,62 @@ namespace MathNet.Filtering.FIR
             switch (range)
             {
                 case BandStopRange stop:
+                    Merge(stop);
+                    return this;
                 case PassRangeBase pass:
-                    throw new NotImplementedException();
-                    break;
+                    return new CombinedRange(pass,this);
             }
             throw new ArgumentOutOfRangeException($"{range.GetType()} is not supported");
+        }
+
+        private void Merge(BandStopRange other)
+        {
+            var tmpStopList=new List<BandStopRange>();
+            for (var i = 0; i < _stopRangeList.Count; i++)
+            {
+                var stop = _stopRangeList[i];
+                var compare = stop.Compare(other);
+                if (compare < 0)
+                {
+                    tmpStopList.Add(stop);
+                }
+
+                if (compare == 0)
+                {
+                    other = MergeOverlap(stop, other);
+                }
+
+                if (compare > 0)
+                {
+                    tmpStopList.Add(other);
+                    other = null;
+                    for (var j = i; j < _stopRangeList.Count; j++)
+                    {
+                        tmpStopList.Add(_stopRangeList[j]);
+                    }
+                    _stopRangeList.Clear();
+                    _stopRangeList.AddRange(tmpStopList);
+                    break;
+                }
+            }
+            if (other != null)
+                _stopRangeList.Add(other);
+        }
+
+        private static BandStopRange MergeOverlap(BandStopRange stop, BandStopRange other)
+        {
+            var min = Math.Min(stop.LowPassRate, other.LowPassRate);
+            var max = Math.Max(stop.HighPassRate, other.HighPassRate);
+            return new BandStopRange(min,max);
+        }
+
+        public void CheckRange(PassRangeBase passRange)
+        {
+            for (var i = 0; i < _stopRangeList.Count; i++)
+            {
+                var stop = _stopRangeList[i];
+                passRange.CheckRange(stop);
+            }
         }
     }
 
@@ -406,6 +458,13 @@ namespace MathNet.Filtering.FIR
         public CombinedRange(FilterPassRange passRange, BandStopRange range)
         {
             passRange.CheckRange(range);
+            _passRanges = passRange;
+            _stopRanges = range;
+        }
+
+        public CombinedRange(PassRangeBase passRange, FilterStopRange range)
+        {
+            range.CheckRange(passRange);
             _passRanges = passRange;
             _stopRanges = range;
         }
