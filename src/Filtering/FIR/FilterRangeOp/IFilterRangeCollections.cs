@@ -287,9 +287,9 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
         public override void CheckRange(BandStopRange range)
         {
             if (_lowCutoffRate<=range.LowPassRate&& range.LowPassRate <=_highCutoffRate)
-                throw new ArgumentException($"Pass/Stop range overlap: {range.LowPassRate}~{Math.Max(_highCutoffRate,range.HighPassRate)}");
+                throw new ArgumentException($"Pass/Stop range overlap: {range.LowPassRate}~{Math.Min(_highCutoffRate,range.HighPassRate)}");
             if (range.LowPassRate<=_lowCutoffRate && _lowCutoffRate<=range.HighPassRate)
-                throw new ArgumentException($"Pass/Stop range overlap: {_lowCutoffRate}~{Math.Max(_highCutoffRate,range.HighPassRate)}");
+                throw new ArgumentException($"Pass/Stop range overlap: {_lowCutoffRate}~{Math.Min(_highCutoffRate,range.HighPassRate)}");
         }
     }
 

@@ -40,7 +40,14 @@ namespace TestFilterConsole
 
             mix = mix.Add(PrimitiveFilterRange.CreatBandStopRange(390, 500));
             Console.WriteLine(mix.Show());
-
+            try
+            {
+                mix = mix.Add(PrimitiveFilterRange.CreatBandStopRange(60, 80));
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
             Console.ReadLine();
         }
     }
