@@ -66,6 +66,7 @@
     <Compile Include="IIR\IirCoefficients.cs" />
     <Compile Include="IIR\OnlineIirFilter.cs" />
     <Compile Include="ImpulseResponse.cs" />
+    <Compile Include="Median\OnlineFastMedianFilter.cs" />
     <Compile Include="Median\OnlineMedianFilter.cs" />
     <Compile Include="OnlineFilter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
