@@ -8,6 +8,7 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
     {
         private IFirFilterRangeCollections _passRanges;
         private IFirFilterRangeCollections _stopRanges;
+
         public CombinedRange(PassRangeBase passRange, BandStopRange range)
         {
             passRange.CheckRange(range);
@@ -32,7 +33,12 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
         public IEnumerable<PrimitiveFilterRange> PrimitiveRanges =>
             _passRanges.PrimitiveRanges.Concat(_stopRanges.PrimitiveRanges);
 
-        public double[] FirCoefficients { get; }
+        public double[] GetFirCoefficients(double sampleRate, int halfOrder)
+        {
+            var first = _passRanges.GetFirCoefficients(sampleRate, halfOrder);
+            return first?.Acc(_stopRanges.GetFirCoefficients(sampleRate, halfOrder));
+        }
+
         public IFirFilterRangeCollections Add(PrimitiveFilterRange range)
         {
             if (range.IsPassType)
@@ -58,6 +64,7 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
     public class FilterPassRange : IFirFilterRangeCollections
     {
         private readonly List<PassRangeBase> _passRangeList;
+
         public FilterPassRange(PassRangeBase lowPassRange, PassRangeBase range)
         {
             _passRangeList = new List<PassRangeBase> {lowPassRange, range};
@@ -65,7 +72,20 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
         }
 
         public IEnumerable<PrimitiveFilterRange> PrimitiveRanges => _passRangeList;
-        public double[] FirCoefficients { get; }
+
+        public double[] GetFirCoefficients(double sampleRate, int halfOrder)
+        {
+            var acc = new double[2*halfOrder+1];
+            for (var i = 0; i < _passRangeList.Count; i++)
+            {
+                var coeff=_passRangeList[i].GetFirCoefficients(sampleRate, halfOrder);
+                if (coeff == null) return null;
+                acc.Acc(coeff);
+            }
+
+            return acc;
+        }
+
         public IFirFilterRangeCollections Add(PrimitiveFilterRange range)
         {
             switch (range)
@@ -99,7 +119,6 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
                 }
             }
             tmpPassRangeList.Add(other);
-            other = null;
             for (var j = lastInd; j < _passRangeList.Count; j++)
             {
                 tmpPassRangeList.Add(_passRangeList[j]);
@@ -136,6 +155,7 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
     public class FilterStopRange : IFirFilterRangeCollections
     {
         private readonly List<BandStopRange> _stopRangeList;
+
         public FilterStopRange(BandStopRange bandStopRange, BandStopRange range)
         {
             _stopRangeList=new List<BandStopRange>{bandStopRange,range};
@@ -143,7 +163,20 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
         }
 
         public IEnumerable<PrimitiveFilterRange> PrimitiveRanges => _stopRangeList;
-        public double[] FirCoefficients { get; }
+
+        public double[] GetFirCoefficients(double sampleRate, int halfOrder)
+        {
+            var acc = new double[2*halfOrder+1];
+            for (var i = 0; i < _stopRangeList.Count; i++)
+            {
+                var coeff=_stopRangeList[i].GetFirCoefficients(sampleRate, halfOrder);
+                if (coeff == null) return null;
+                acc.Acc(coeff);
+            }
+
+            return acc;
+        }
+
         public IFirFilterRangeCollections Add(PrimitiveFilterRange range)
         {
             switch (range)
@@ -177,7 +210,6 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
                 }
             }
             tmpStopList.Add(other);
-            other = null;
             for (var j = lastInd; j < _stopRangeList.Count; j++)
             {
                 tmpStopList.Add(_stopRangeList[j]);

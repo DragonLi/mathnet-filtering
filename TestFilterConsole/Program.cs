@@ -12,41 +12,41 @@ namespace TestFilterConsole
             var high = PrimitiveFilterRange.CreateHighPassRange(10000);
             var stop = PrimitiveFilterRange.CreatBandStopRange(35,38);
             var mix = low.Add(with).Add(high).Add(stop);
-            Console.WriteLine(mix.Show());
+            PrintRange(mix);
 
             mix = low.Add(with).Add(stop).Add(high);
-            Console.WriteLine(mix.Show());
+            PrintRange(mix);
 
             mix = with.Add(low).Add(high).Add(stop);
-            Console.WriteLine(mix.Show());
+            PrintRange(mix);
 
             mix = mix.Add(PrimitiveFilterRange.CreateBandWithRange(20, 30));
-            Console.WriteLine(mix.Show());
+            PrintRange(mix);
 
             mix = mix.Add(PrimitiveFilterRange.CreateBandWithRange(30, 31));
-            Console.WriteLine(mix.Show());
+            PrintRange(mix);
 
             mix = mix.Add(PrimitiveFilterRange.CreateBandWithRange(50, 100));
-            Console.WriteLine(mix.Show());
+            PrintRange(mix);
 
             mix = mix.Add(PrimitiveFilterRange.CreateBandWithRange(1, 30));
-            Console.WriteLine(mix.Show());
+            PrintRange(mix);
 
             mix = mix.Add(PrimitiveFilterRange.CreatBandStopRange(310, 400));
-            Console.WriteLine(mix.Show());
+            PrintRange(mix);
 
             mix = mix.Add(PrimitiveFilterRange.CreatBandStopRange(310, 400));
-            Console.WriteLine(mix.Show());
+            PrintRange(mix);
 
             mix = mix.Add(PrimitiveFilterRange.CreatBandStopRange(390, 500));
-            Console.WriteLine(mix.Show());
+            PrintRange(mix);
 
             mix = low.Add(with).Add(high);
             mix = mix.Add(PrimitiveFilterRange.CreateBandWithRange(10, 30));
-            Console.WriteLine(mix.Show());
+            PrintRange(mix);
 
             mix = mix.Add(PrimitiveFilterRange.CreateBandWithRange(30,10000));
-            Console.WriteLine(mix.Show());
+            PrintRange(mix);
 
             try
             {
@@ -57,6 +57,12 @@ namespace TestFilterConsole
                 Console.WriteLine(e);
             }
             Console.ReadLine();
+        }
+
+        private static void PrintRange(IFirFilterRangeCollections mix)
+        {
+            Console.WriteLine(mix.Show());
+            Console.WriteLine(mix.GetFirCoefficients(500, 2).Show());
         }
     }
 }

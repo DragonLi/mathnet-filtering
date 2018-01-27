@@ -6,7 +6,7 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
     public class AllRange : IFirFilterRangeCollections
     {
         public IEnumerable<PrimitiveFilterRange> PrimitiveRanges => null;
-        public double[] FirCoefficients => null;
+        public double[] GetFirCoefficients(double sampleRate, int halfOrder) => null;
         public static readonly IFirFilterRangeCollections Instance = new AllRange();
         private AllRange(){}
 
@@ -82,7 +82,7 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
         protected abstract IFirFilterRangeCollections Add(HighPassRange range);
         protected abstract IFirFilterRangeCollections Add(BandWithRange range);
         protected abstract IFirFilterRangeCollections Add(BandStopRange range);
-        public abstract double[] FirCoefficients { get; }
+        public abstract double[] GetFirCoefficients(double sampleRate, int halfOrder);
     }
 
     public abstract class PassRangeBase : PrimitiveFilterRange
@@ -129,7 +129,11 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
             _lowPassRate = lowPassRate;
         }
 
-        public override double[] FirCoefficients { get; }
+        public override double[] GetFirCoefficients(double sampleRate, int halfOrder)
+        {
+            return FirCoefficients.LowPass(sampleRate,_lowPassRate,halfOrder);
+        }
+
         public override string Show()
         {
             return $"[0,{_lowPassRate}]";
@@ -181,7 +185,11 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
             _highPassRate = highPassRate;
         }
 
-        public override double[] FirCoefficients { get; }
+        public override double[] GetFirCoefficients(double sampleRate, int halfOrder)
+        {
+            return FirCoefficients.HighPass(sampleRate,_highPassRate,halfOrder);
+        }
+
         public override string Show()
         {
             return $"[{_highPassRate},Infinity)";
@@ -241,7 +249,11 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
             _highCutoffRate = highCutoffRate;
         }
 
-        public override double[] FirCoefficients { get; }
+        public override double[] GetFirCoefficients(double sampleRate, int halfOrder)
+        {
+            return FirCoefficients.BandPass(sampleRate,_lowCutoffRate,_highCutoffRate,halfOrder);
+        }
+
         public override string Show()
         {
             return $"[{_lowCutoffRate},{_highCutoffRate}]";
@@ -297,7 +309,11 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
             _highPassRate = highPassRate;
         }
 
-        public override double[] FirCoefficients { get; }
+        public override double[] GetFirCoefficients(double sampleRate, int halfOrder)
+        {
+            return FirCoefficients.BandStop(sampleRate,_lowPassRate,_highPassRate,halfOrder);
+        }
+
         public override string Show()
         {
             return $"stop:[{_lowPassRate},{_highPassRate}]";

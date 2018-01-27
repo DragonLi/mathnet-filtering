@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Text;
 
 namespace MathNet.Filtering.FIR.FilterRangeOp
@@ -6,7 +7,7 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
     public interface IFirFilterRangeCollections
     {
         IEnumerable<PrimitiveFilterRange> PrimitiveRanges { get; }
-        double[] FirCoefficients { get; }
+        double[] GetFirCoefficients(double sampleRate, int halfOrder);
         IFirFilterRangeCollections Add(PrimitiveFilterRange range);
     }
 
@@ -19,6 +20,29 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
             {
                 builder.Append(range.Show());
                 builder.Append(" ");
+            }
+
+            return builder.ToString();
+        }
+
+        public static double[] Acc(this double[] acc, double[] other)
+        {
+            if (acc == null) return null;
+            if (other == null) return null;
+            for (var i = 0; i < acc.Length; i++)
+            {
+                acc[i] += other[i];
+            }
+            return acc;
+        }
+
+        public static string Show(this double[] coeff)
+        {
+            if (coeff==null) return "full range";
+            var builder = new StringBuilder();
+            for (var i = 0; i < coeff.Length; i++)
+            {
+                builder.Append(coeff[i]).Append(" ");
             }
 
             return builder.ToString();
