@@ -129,18 +129,22 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
 
         private static PassRangeBase MergeOverlap(PassRangeBase range, PassRangeBase other)
         {
-            var min = Math.Min(range.Min, other.Min);
+            var min = (int)Math.Min(range.Min, other.Min);
             var max = Math.Max(range.Max, other.Max);
-            if (0 < min && max != Double.PositiveInfinity)
-            {
-                return new BandWithRange((int)min,(int)max);
-            }
-
             if (max == Double.PositiveInfinity)
             {
-                return new HighPassRange((int)min);
+                if (min == 0)
+                    return AllRange.Instance;
+                return new HighPassRange(min);
             }
-            return new LowPassRange((int)max);
+
+            var intmax = (int)max;
+            if (0 < min)
+            {
+                return new BandWithRange(min,intmax);
+            }
+
+            return new LowPassRange(intmax);
         }
 
         public void CheckRange(BandStopRange range)

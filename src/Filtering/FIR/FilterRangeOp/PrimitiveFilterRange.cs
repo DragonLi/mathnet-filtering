@@ -3,19 +3,6 @@ using System.Collections.Generic;
 
 namespace MathNet.Filtering.FIR.FilterRangeOp
 {
-    public class AllRange : IFirFilterRangeCollections
-    {
-        public IEnumerable<PrimitiveFilterRange> PrimitiveRanges => null;
-        public double[] GetFirCoefficients(double sampleRate, int halfOrder) => null;
-        public static readonly IFirFilterRangeCollections Instance = new AllRange();
-        private AllRange(){}
-
-        public IFirFilterRangeCollections Add(PrimitiveFilterRange range)
-        {
-            return range;
-        }
-    }
-
     public abstract class PrimitiveFilterRange : IFirFilterRangeCollections
     {
         public abstract string Show();
@@ -109,6 +96,22 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
         public int Compare(PassRangeBase y)
         {
             return PassRangeComparator(this, y);
+        }
+
+        private static PassRangeBase MergeOverlap(PassRangeBase range, PassRangeBase other)
+        {
+            var min = Math.Min(range.Min, other.Min);
+            var max = Math.Max(range.Max, other.Max);
+            if (0 < min && max != Double.PositiveInfinity)
+            {
+                return new BandWithRange((int)min,(int)max);
+            }
+
+            if (max == Double.PositiveInfinity)
+            {
+                return new HighPassRange((int)min);
+            }
+            return new LowPassRange((int)max);
         }
 
         public abstract double Max { get; }
@@ -291,6 +294,38 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
                 throw new ArgumentException($"Pass/Stop range overlap: {range.LowPassRate}~{Math.Min(_highCutoffRate,range.HighPassRate)}");
             if (range.LowPassRate<=_lowCutoffRate && _lowCutoffRate<=range.HighPassRate)
                 throw new ArgumentException($"Pass/Stop range overlap: {_lowCutoffRate}~{Math.Min(_highCutoffRate,range.HighPassRate)}");
+        }
+    }
+
+    public class AllRange : PassRangeBase
+    {
+        public static readonly AllRange Instance = new AllRange();
+        private AllRange(){}
+
+        public override string Show()
+        {
+            return "All Range";
+        }
+
+        protected override IFirFilterRangeCollections Add(LowPassRange range) => range;
+
+        protected override IFirFilterRangeCollections Add(HighPassRange range) => range;
+
+        protected override IFirFilterRangeCollections Add(BandWithRange range) => range;
+
+        protected override IFirFilterRangeCollections Add(BandStopRange range) => range;
+
+        public override double[] GetFirCoefficients(double sampleRate, int halfOrder) => null;
+        public new IFirFilterRangeCollections Add(PrimitiveFilterRange range)
+        {
+            return range;
+        }
+
+        public override double Max => double.PositiveInfinity;
+        public override double Min => 0;
+        public override void CheckRange(BandStopRange range)
+        {
+            throw new ArgumentException($"Pass/Stop range overlap:{range.LowPassRate}~{range.HighPassRate}");
         }
     }
 
