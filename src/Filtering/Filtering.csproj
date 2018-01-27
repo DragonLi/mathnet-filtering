@@ -57,8 +57,8 @@
     <Compile Include="DataSources\SignalGenerator.cs" />
     <Compile Include="DataSources\SinusoidalSource.cs" />
     <Compile Include="FilterType.cs" />
+    <Compile Include="FIR\FilterRangeOp\IFilterRangeCollections.cs" />
     <Compile Include="FIR\FirCoefficients.cs" />
-    <Compile Include="FIR\IFilterRangeCollections.cs" />
     <Compile Include="FIR\OnlineFirFilter.cs" />
     <Compile Include="IOnlineFilter.cs" />
     <Compile Include="IIR\IirCoefficients.cs" />

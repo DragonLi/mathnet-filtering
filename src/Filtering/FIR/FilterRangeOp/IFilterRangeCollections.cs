@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
-namespace MathNet.Filtering.FIR
+namespace MathNet.Filtering.FIR.FilterRangeOp
 {
     public interface IFirFilterRangeCollections
     {
@@ -11,8 +12,44 @@ namespace MathNet.Filtering.FIR
         IFirFilterRangeCollections Add(PrimitiveFilterRange range);
     }
 
+    public static class FilterRangeHelper
+    {
+        public static string Show(this IFirFilterRangeCollections col)
+        {
+            var builder = new StringBuilder();
+            foreach (var range in col.PrimitiveRanges)
+            {
+                builder.Append(range.Show());
+                builder.Append(" ");
+            }
+
+            return builder.ToString();
+        }
+    }
+
     public abstract class PrimitiveFilterRange : IFirFilterRangeCollections
     {
+        public abstract string Show();
+        public static LowPassRange CreateLowPassRange(int lowPassRate)
+        {
+            return new LowPassRange(lowPassRate);
+        }
+
+        public static BandWithRange CreateBandWithRange(int lowCutoff, int highCutoff)
+        {
+            return new BandWithRange(lowCutoff,highCutoff);
+        }
+
+        public static HighPassRange CreateHighPassRange(int highPassRate)
+        {
+            return new HighPassRange(highPassRate);
+        }
+
+        public static BandStopRange CreatBandStopRange(int lowPassRate, int highPassRate)
+        {
+            return new BandStopRange(lowPassRate,highPassRate);
+        }
+
         private readonly PrimitiveFilterRange[] _primitiveRanges;
 
         protected PrimitiveFilterRange()
@@ -104,6 +141,11 @@ namespace MathNet.Filtering.FIR
         }
 
         public override double[] FirCoefficients { get; }
+        public override string Show()
+        {
+            return $"[0,{_lowPassRate}]";
+        }
+
         protected override IFirFilterRangeCollections Add(LowPassRange range)
         {
             return range._lowPassRate > _lowPassRate ? range : this;
@@ -151,6 +193,11 @@ namespace MathNet.Filtering.FIR
         }
 
         public override double[] FirCoefficients { get; }
+        public override string Show()
+        {
+            return $"[{_highPassRate},Infinity)";
+        }
+
         protected override IFirFilterRangeCollections Add(LowPassRange range)
         {
             return range.Add(this);
@@ -206,6 +253,11 @@ namespace MathNet.Filtering.FIR
         }
 
         public override double[] FirCoefficients { get; }
+        public override string Show()
+        {
+            return $"[{_lowCutoffRate},{_highCutoffRate}]";
+        }
+
         protected override IFirFilterRangeCollections Add(LowPassRange range)
         {
             return range.Add(this);
@@ -234,14 +286,10 @@ namespace MathNet.Filtering.FIR
 
         public override void CheckRange(BandStopRange range)
         {
-            if (_lowCutoffRate<=range.LowPassRate&& range.HighPassRate <=_highCutoffRate)
-                throw new ArgumentException($"Pass/Stop range overlap: {range.LowPassRate}~{range.HighPassRate}");
-            if (_lowCutoffRate<=range.LowPassRate&& _highCutoffRate <=range.HighPassRate)
-                throw new ArgumentException($"Pass/Stop range overlap: {range.LowPassRate}~{_highCutoffRate}");
-            if (range.LowPassRate<=_lowCutoffRate && _highCutoffRate<=range.HighPassRate)
-                throw new ArgumentException($"Pass/Stop range overlap: {_lowCutoffRate}~{_highCutoffRate}");
-            if (range.LowPassRate<=_lowCutoffRate && range.HighPassRate<=_highCutoffRate)
-                throw new ArgumentException($"Pass/Stop range overlap: {_lowCutoffRate}~{range.HighPassRate}");
+            if (_lowCutoffRate<=range.LowPassRate&& range.LowPassRate <=_highCutoffRate)
+                throw new ArgumentException($"Pass/Stop range overlap: {range.LowPassRate}~{Math.Max(_highCutoffRate,range.HighPassRate)}");
+            if (range.LowPassRate<=_lowCutoffRate && _lowCutoffRate<=range.HighPassRate)
+                throw new ArgumentException($"Pass/Stop range overlap: {_lowCutoffRate}~{Math.Max(_highCutoffRate,range.HighPassRate)}");
         }
     }
 
@@ -261,6 +309,11 @@ namespace MathNet.Filtering.FIR
         }
 
         public override double[] FirCoefficients { get; }
+        public override string Show()
+        {
+            return $"stop:[{_lowPassRate},{_highPassRate}]";
+        }
+
         public override bool IsPassType => false;
 
         protected override IFirFilterRangeCollections Add(LowPassRange range) => new CombinedRange(range,this);
@@ -316,32 +369,30 @@ namespace MathNet.Filtering.FIR
         private void Merge(PassRangeBase other)
         {
             var tmpPassRangeList = new List<PassRangeBase>();
+            var lastInd = _passRangeList.Count;
             for (var i = 0; i < _passRangeList.Count; i++)
             {
                 var range = _passRangeList[i];
                 var compare = range.Compare(other);
                 if (compare < 0)
-                {
                     tmpPassRangeList.Add(range);
-                }
                 if (compare == 0)
-                {
                     other = MergeOverlap(range,other);
-                }
 
-                if (compare <= 0) continue;
-                tmpPassRangeList.Add(other);
-                other = null;
-                for (var j = i; j < _passRangeList.Count; j++)
+                if (compare > 0)
                 {
-                    tmpPassRangeList.Add(_passRangeList[j]);
+                    lastInd = i;
+                    break;
                 }
-                _passRangeList.Clear();
-                _passRangeList.AddRange(tmpPassRangeList);
-                break;
             }
-            if (other != null)
-                _passRangeList.Add(other);
+            tmpPassRangeList.Add(other);
+            other = null;
+            for (var j = lastInd; j < _passRangeList.Count; j++)
+            {
+                tmpPassRangeList.Add(_passRangeList[j]);
+            }
+            _passRangeList.Clear();
+            _passRangeList.AddRange(tmpPassRangeList);
         }
 
         private static PassRangeBase MergeOverlap(PassRangeBase range, PassRangeBase other)
@@ -396,35 +447,30 @@ namespace MathNet.Filtering.FIR
         private void Merge(BandStopRange other)
         {
             var tmpStopList=new List<BandStopRange>();
+            var lastInd = _stopRangeList.Count;
             for (var i = 0; i < _stopRangeList.Count; i++)
             {
                 var stop = _stopRangeList[i];
                 var compare = stop.Compare(other);
                 if (compare < 0)
-                {
                     tmpStopList.Add(stop);
-                }
-
                 if (compare == 0)
-                {
                     other = MergeOverlap(stop, other);
-                }
 
                 if (compare > 0)
                 {
-                    tmpStopList.Add(other);
-                    other = null;
-                    for (var j = i; j < _stopRangeList.Count; j++)
-                    {
-                        tmpStopList.Add(_stopRangeList[j]);
-                    }
-                    _stopRangeList.Clear();
-                    _stopRangeList.AddRange(tmpStopList);
+                    lastInd = i;
                     break;
                 }
             }
-            if (other != null)
-                _stopRangeList.Add(other);
+            tmpStopList.Add(other);
+            other = null;
+            for (var j = lastInd; j < _stopRangeList.Count; j++)
+            {
+                tmpStopList.Add(_stopRangeList[j]);
+            }
+            _stopRangeList.Clear();
+            _stopRangeList.AddRange(tmpStopList);
         }
 
         private static BandStopRange MergeOverlap(BandStopRange stop, BandStopRange other)
