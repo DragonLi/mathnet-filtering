@@ -49,6 +49,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Channel\IChannel.cs" />
+    <Compile Include="SeqCombinedOnlineFilter.cs" />
     <Compile Include="Compatibility.cs" />
     <Compile Include="DataSources\ArbitraryPeriodicSource.cs" />
     <Compile Include="DataSources\StableNoiseSource.cs" />

@@ -10,9 +10,9 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
             return new LowPassRange(lowPassRate);
         }
 
-        public static BandWithRange CreateBandWithRange(int lowCutoff, int highCutoff)
+        public static BandPassRange CreateBandWithRange(int lowCutoff, int highCutoff)
         {
-            return new BandWithRange(lowCutoff,highCutoff);
+            return new BandPassRange(lowCutoff,highCutoff);
         }
 
         public static HighPassRange CreateHighPassRange(int highPassRate)
@@ -47,7 +47,7 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
         public abstract IFirFilterRangeCollections Add(PrimitiveFilterRange range);
         public abstract IFirFilterRangeCollections Add(LowPassRange range);
         public abstract IFirFilterRangeCollections Add(HighPassRange range);
-        public abstract IFirFilterRangeCollections Add(BandWithRange range);
+        public abstract IFirFilterRangeCollections Add(BandPassRange range);
         public abstract IFirFilterRangeCollections Add(BandStopRange range);
         public abstract IFirFilterRangeCollections Add(AllRange range);
         public abstract IFirFilterRangeCollections Add(FilterPassRange range);
@@ -149,7 +149,7 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
             return new FilterPassRange(this, range);
         }
 
-        public override IFirFilterRangeCollections Add(BandWithRange range)
+        public override IFirFilterRangeCollections Add(BandPassRange range)
         {
             if (_lowPassRate < range.LowCutoffRate) return new FilterPassRange(this, range);
             if (_lowPassRate < range.HighCutoffRate) return new LowPassRange(range.HighCutoffRate);
@@ -209,7 +209,7 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
             return _highPassRate > range._highPassRate ? range : this;
         }
 
-        public override IFirFilterRangeCollections Add(BandWithRange range)
+        public override IFirFilterRangeCollections Add(BandPassRange range)
         {
             if (_highPassRate > range.HighCutoffRate) return new FilterPassRange(range,this);
             if (_highPassRate > range.LowCutoffRate) return new HighPassRange(range.LowCutoffRate);
@@ -235,7 +235,7 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
     }
 
     /// range:[lowCutoffRate,highCutoffRate], half-> normalize(highCutoffRate)-normalize(lowCutoffRate)
-    public class BandWithRange:PassRangeBase
+    public class BandPassRange:PassRangeBase
     {
         private readonly int _lowCutoffRate;
         private readonly int _highCutoffRate;
@@ -243,7 +243,7 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
         public int HighCutoffRate => _highCutoffRate;
 
         /// range:[lowCutoffRate,highCutoffRate], half-> normalize(highCutoffRate)-normalize(lowCutoffRate)
-        public BandWithRange(int lowCutoffRate, int highCutoffRate)
+        public BandPassRange(int lowCutoffRate, int highCutoffRate)
         {
             if (lowCutoffRate<0)throw new ArgumentException(nameof(lowCutoffRate));
             if (highCutoffRate<0)throw new ArgumentException(nameof(highCutoffRate));
@@ -278,7 +278,7 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
             return range.Add(this);
         }
 
-        public override IFirFilterRangeCollections Add(BandWithRange range)
+        public override IFirFilterRangeCollections Add(BandPassRange range)
         {
             if (_lowCutoffRate <= range._lowCutoffRate && range._highCutoffRate <= _highCutoffRate) return this;
             if (range._lowCutoffRate <= _lowCutoffRate && _highCutoffRate <= range._highCutoffRate) return range;
@@ -317,7 +317,7 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
 
         public override IFirFilterRangeCollections Add(HighPassRange range) => this;
 
-        public override IFirFilterRangeCollections Add(BandWithRange range) => this;
+        public override IFirFilterRangeCollections Add(BandPassRange range) => this;
 
         public override IFirFilterRangeCollections Add(BandStopRange range) => this;
 
@@ -415,7 +415,7 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
 
         public override IFirFilterRangeCollections Add(HighPassRange range) => new CombinedRange(range,this);
 
-        public override IFirFilterRangeCollections Add(BandWithRange range) => new CombinedRange(range,this);
+        public override IFirFilterRangeCollections Add(BandPassRange range) => new CombinedRange(range,this);
 
         public override IFirFilterRangeCollections Add(BandStopRange range)
         {

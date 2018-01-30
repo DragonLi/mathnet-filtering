@@ -126,7 +126,7 @@ namespace MathNet.Filtering.FIR.FilterRangeOp
             {
                 var intmax = (int)max;
                 if (min > 0)
-                    return new BandWithRange(min,intmax);
+                    return new BandPassRange(min,intmax);
                 return new LowPassRange(intmax);
             }
             if (min == 0)
