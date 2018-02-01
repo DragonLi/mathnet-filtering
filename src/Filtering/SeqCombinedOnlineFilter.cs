@@ -2,7 +2,7 @@
 {
     public class SeqCombinedOnlineFilter:IOnlineFilter
     {
-        private IOnlineFilter[] _lst;
+        private readonly IOnlineFilter[] _lst;
 
         public SeqCombinedOnlineFilter(IOnlineFilter[] lst)
         {
@@ -14,6 +14,7 @@
             for (var i = 0; i < _lst.Length; i++)
             {
                 var filter = _lst[i];
+                if (filter == null) continue;
                 sample=filter.ProcessSample(sample);
             }
 
